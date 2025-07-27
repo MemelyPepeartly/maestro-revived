@@ -11,9 +11,13 @@
       "discord": "errational#2007",
       "twitter": "@death_save_dev",
       "reddit": "u/etherboy12"
+    },
+    {
+      "name": "Memely",
+      "discord": "memely"
     }
   ],
-  "version":"1.0.1",
+  "version":"",
   "minimumCoreVersion":"13",
   "compatibleCoreVersion":"13.346",
   "esmodules":["./maestro.js"],
