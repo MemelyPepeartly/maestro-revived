@@ -6,6 +6,12 @@
 3. A GM must be logged in for many of the Maestro functions to work due to underlying Foundry permission requirements.
 4. Game systems that do not include an Item Id reference in their item roll chat messages **cannot** be used with Item Tracks
 ---
+## [1.0.0] - 2025-07-27
+> Updated for Foundry VTT v13
+### Changed
+- Updated manifest for Foundry VTT v13.346
+
+
 ## [0.9.0] - 2022-08-22
 > This update adds support for Foundry VTT v10
 
