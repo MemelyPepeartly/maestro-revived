@@ -46,7 +46,7 @@ jobs:
       if: endsWith(github.ref, 'master')
       with:
         allowUpdates: true
-        name: Latest
+        name: ${{ github.event.release.tag_name }}
         draft: false
         prerelease: false
         token: ${{ secrets.GITHUB_TOKEN }}
