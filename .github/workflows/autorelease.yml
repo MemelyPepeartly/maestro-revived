@@ -1,0 +1,69 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: vars
+        run: echo "ver=$(jq -r '.version' module.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag exists
+        id: check
+        run: |
+          git fetch --tags
+          if git rev-parse "v${{ steps.vars.outputs.ver }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Substitute Manifest and Download Links
+        if: steps.check.outputs.exists == 'false'
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: 'module.json'
+        env:
+          version: ${{ steps.vars.outputs.ver }}
+          manifest: https://github.com/${{ github.repository }}/releases/latest/download/module.json
+          download: https://github.com/${{ github.repository }}/releases/download/v${{ steps.vars.outputs.ver }}/module.zip
+
+      - name: Zip Module
+        if: steps.check.outputs.exists == 'false'
+        run: zip -r ./module.zip . -x@.github/zip-exclude.lst
+
+      - name: Create Version Release
+        if: steps.check.outputs.exists == 'false'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          name: v${{ steps.vars.outputs.ver }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: './module.json, ./module.zip'
+          tag: v${{ steps.vars.outputs.ver }}
+          body: Auto release for version v${{ steps.vars.outputs.ver }}
+
+      - name: Update Latest Release
+        if: steps.check.outputs.exists == 'false'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          name: Latest
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: './module.json, ./module.zip'
+          tag: latest
+          body: Auto release for version v${{ steps.vars.outputs.ver }}
