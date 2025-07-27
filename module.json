@@ -12,7 +12,7 @@
       "reddit": "u/etherboy12"
     }
   ],
-  "version":"1.0.0",
+  "version":"1.0.1",
   "minimumCoreVersion":"13",
   "compatibleCoreVersion":"13.346",
   "esmodules":["./maestro.js"],
