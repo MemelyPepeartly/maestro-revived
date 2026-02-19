@@ -66,4 +66,6 @@ Click the Sponsor button at the top of the Github repo!
 Critical sound: "Ta da" by Mike Koenig http://soundbible.com/1003-Ta-Da.html    
 Failure sound: "Cartoon fail or sad trumpet 2" from https://zapsplat.com
 
-**Previously Featured code by**: @kakaroto  
+**Originally developed by**: Evan Clarke (errational)  
+**Remaster development by**: Memely Pepeartly  
+**Previously featured code by**: @kakaroto  
