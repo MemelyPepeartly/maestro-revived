@@ -361,6 +361,13 @@ interface HypeTrackFormData {
     playlist: string;
 }
 
+interface PlaylistOptionView {
+    id: string;
+    name: string;
+    label: string;
+    soundCount: number;
+}
+
 class HypeTrackActorForm extends FormApplication<FormApplicationOptions, HypeTrackFormData, {}>
 {
     actor: Actor;
@@ -378,21 +385,127 @@ class HypeTrackActorForm extends FormApplication<FormApplicationOptions, HypeTra
             title: DEFAULT_CONFIG.HypeTrack.aTitle,
             template: DEFAULT_CONFIG.HypeTrack.templatePath,
             classes: ["sheet"],
-            width: 500
+            width: 560
         });
     }
 
+    private _buildPlaylistOptions(): {
+        activePlaylists: PlaylistOptionView[];
+        emptyPlaylists: PlaylistOptionView[];
+        selectedPlaylist: Playlist | null;
+        selectedPlaylistMissing: boolean;
+    } {
+        const selectedPlaylist = game.playlists.get(this.data.playlist) ?? null;
+        const defaultHypePlaylist = game.playlists.getName(DEFAULT_CONFIG.HypeTrack.playlistName);
+
+        const options: PlaylistOptionView[] = game.playlists.contents
+            .map((playlist) => {
+                const soundCount = playlist.sounds.contents.length;
+                return {
+                    id: playlist.id,
+                    name: playlist.name,
+                    label: `${playlist.name} (${soundCount})`,
+                    soundCount
+                };
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (defaultHypePlaylist) {
+            const idx = options.findIndex((playlist) => playlist.id === defaultHypePlaylist.id);
+            if (idx > 0) {
+                const [recommended] = options.splice(idx, 1);
+                recommended.label = `${recommended.label} - Recommended`;
+                options.unshift(recommended);
+            }
+        }
+
+        const activePlaylists = options.filter((playlist) => playlist.soundCount > 0);
+        const emptyPlaylists = options.filter((playlist) => playlist.soundCount === 0);
+
+        return {
+            activePlaylists,
+            emptyPlaylists,
+            selectedPlaylist,
+            selectedPlaylistMissing: Boolean(this.data.playlist && !selectedPlaylist)
+        };
+    }
+
+    private _buildTrackView(selectedPlaylist: Playlist | null): {
+        playlistSounds: PlaylistSound[];
+        hasTracks: boolean;
+        selectedTrackMissing: boolean;
+        selectedTrackLabel: string;
+    } {
+        const playlistSounds = selectedPlaylist?.sounds?.contents ?? [];
+        const hasTracks = playlistSounds.length > 0;
+
+        const selectedTrack = this.data.track;
+        if (!selectedTrack) {
+            return {
+                playlistSounds,
+                hasTracks,
+                selectedTrackMissing: false,
+                selectedTrackLabel: ""
+            };
+        }
+
+        if (isPlaybackMode(selectedTrack)) {
+            const modeLabel = selectedTrack === DEFAULT_CONFIG.ItemTrack.playbackModes.random
+                ? "Random Track"
+                : "Play Entire Playlist";
+            return {
+                playlistSounds,
+                hasTracks,
+                selectedTrackMissing: false,
+                selectedTrackLabel: modeLabel
+            };
+        }
+
+        const selectedSound = selectedPlaylist?.sounds?.get(selectedTrack) ?? null;
+        return {
+            playlistSounds,
+            hasTracks,
+            selectedTrackMissing: !selectedSound,
+            selectedTrackLabel: selectedSound?.name ?? `Missing Track (${selectedTrack})`
+        };
+    }
+
+    private _currentSelectionSummary(selectedPlaylist: Playlist | null, selectedTrackLabel: string): string {
+        const playlistPart = selectedPlaylist?.name ?? (this.data.playlist ? "Missing Playlist" : "No Playlist");
+        const trackPart = selectedTrackLabel || (this.data.track ? `Missing Track (${this.data.track})` : "No Track");
+        return `${playlistPart} -> ${trackPart}`;
+    }
+
     override getData(): {
+        actorName: string;
+        activePlaylists: PlaylistOptionView[];
+        emptyPlaylists: PlaylistOptionView[];
+        selectedPlaylistMissing: boolean;
+        selectedTrackMissing: boolean;
+        selectedTrackLabel: string;
+        currentSelectionSummary: string;
+        hasTracks: boolean;
         playlistSounds: PlaylistSound[];
         track: string;
         playlist: string;
-        playlists: Playlist[];
+        trackSelectDisabled: boolean;
     } {
+        const playlistView = this._buildPlaylistOptions();
+        const trackView = this._buildTrackView(playlistView.selectedPlaylist);
+
         return {
-            playlistSounds: Playback.getPlaylistSounds(this.data.playlist),
+            actorName: this.actor.name ?? "Actor",
+            activePlaylists: playlistView.activePlaylists,
+            emptyPlaylists: playlistView.emptyPlaylists,
+            selectedPlaylistMissing: playlistView.selectedPlaylistMissing,
+            selectedTrackMissing: trackView.selectedTrackMissing,
+            selectedTrackLabel: trackView.selectedTrackLabel,
+            currentSelectionSummary: this._currentSelectionSummary(playlistView.selectedPlaylist, trackView.selectedTrackLabel),
+            hasTracks: trackView.hasTracks,
+            playlistSounds: trackView.playlistSounds,
             track: this.data.track,
             playlist: this.data.playlist,
-            playlists: game.playlists.contents
+            trackSelectDisabled: !this.data.playlist
         };
     }
 
@@ -409,7 +522,19 @@ class HypeTrackActorForm extends FormApplication<FormApplicationOptions, HypeTra
 
         const playlistSelect = html.find(".playlist-select");
         playlistSelect.on("change", (event) => {
-            this.data.playlist = String((event.currentTarget as HTMLSelectElement).value ?? "");
+            const nextPlaylistId = String((event.currentTarget as HTMLSelectElement).value ?? "");
+            const previousTrack = this.data.track;
+
+            this.data.playlist = nextPlaylistId;
+
+            if (previousTrack && !isPlaybackMode(previousTrack)) {
+                const nextPlaylist = game.playlists.get(nextPlaylistId);
+                const stillExists = Boolean(nextPlaylist?.sounds?.get(previousTrack));
+                if (!stillExists) {
+                    this.data.track = "";
+                }
+            }
+
             this.render();
         });
     }

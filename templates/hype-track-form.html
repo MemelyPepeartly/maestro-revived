@@ -1,32 +1,66 @@
-<form autocomplete="off" onsubmit="event.preventDefault();">
+<form class="maestro-hype-form" autocomplete="off" onsubmit="event.preventDefault();">
+    <div class="maestro-hype-summary">
+        <strong>{{actorName}}</strong>
+        <p class="notes">Current selection: {{currentSelectionSummary}}</p>
+    </div>
+
     <div class="form-group">
         <label>{{localize "MAESTRO.HYPE-TRACK.Form.PlaylistLabel"}}</label>
         <select name="playlist" class="playlist-select" title="{{localize "FORM.PlaylistSelection"}}" default="">
             {{#select playlist}}
                 <option value="">{{localize "MAESTRO.FORM.SelectNone"}}</option>
-                {{#each playlists}}
-                <option value="{{this.id}}">{{this.name}}</option>
-                {{/each}}
+
+                {{#if selectedPlaylistMissing}}
+                <option value="{{playlist}}">Current Assignment (Missing Playlist)</option>
+                {{/if}}
+
+                {{#if activePlaylists}}
+                <optgroup label="Playlists With Tracks">
+                    {{#each activePlaylists}}
+                    <option value="{{this.id}}">{{this.label}}</option>
+                    {{/each}}
+                </optgroup>
+                {{/if}}
+
+                {{#if emptyPlaylists}}
+                <optgroup label="Empty Playlists">
+                    {{#each emptyPlaylists}}
+                    <option value="{{this.id}}">{{this.label}}</option>
+                    {{/each}}
+                </optgroup>
+                {{/if}}
             {{/select}}
         </select>
-        <p class="notes">{{localize "MAESTRO.HYPE-TRACK.FormPlaylistNotes"}}</p> 
+        <p class="notes">{{localize "MAESTRO.HYPE-TRACK.FormPlaylistNotes"}}</p>
+        {{#if selectedPlaylistMissing}}
+        <p class="notes maestro-note-warning">The actor references a playlist that no longer exists. Saving will replace it.</p>
+        {{/if}}
     </div>
 
     <div class="form-group">
         <label>{{localize "MAESTRO.HYPE-TRACK.Form.TrackLabel"}}</label>
-        <select name="track" class="track-select" title="{{localize "MAESTRO.HYPE-TRACK.FormTrackSelection"}}">
+        <select name="track" class="track-select" title="{{localize "MAESTRO.HYPE-TRACK.FormTrackSelection"}}" {{#if trackSelectDisabled}}disabled{{/if}}>
             {{#select track}}
                 <option value="">{{localize "MAESTRO.HYPE-TRACK.FormSelectNone"}}</option>
-                {{#if playlistSounds}}
+
+                {{#if selectedTrackMissing}}
+                <option value="{{track}}">Current Assignment (Missing Track)</option>
+                {{/if}}
+
+                {{#if hasTracks}}
                 <option value="random-track">{{localize "MAESTRO.FORM.PlayRandom"}}</option>
                 <option value="play-all">{{localize "MAESTRO.FORM.PlayAll"}}</option>
                 {{/if}}
+
                 {{#each playlistSounds}}
                 <option value="{{this.id}}">{{this.name}}</option>
                 {{/each}}
             {{/select}}
         </select>
-        <p class="notes">{{localize "MAESTRO.HYPE-TRACK.FormTrackNotes"}}</p> 
+        <p class="notes">{{localize "MAESTRO.HYPE-TRACK.FormTrackNotes"}}</p>
+        {{#if selectedTrackMissing}}
+        <p class="notes maestro-note-warning">This actor references a track that no longer exists in the selected playlist.</p>
+        {{/if}}
     </div>
 
     <button type="submit" name="submit">

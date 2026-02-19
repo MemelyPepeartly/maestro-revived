@@ -16,6 +16,7 @@
 - Hype Track now stops prior hype playback cleanly on turn changes (no paused-track buildup in playlist UI).
 - Hype Track now preserves uninterrupted playback when consecutive combatants share the same hype track.
 - Added configurable default Hype playlist/track settings used when an actor has no explicit Hype assignment.
+- Reworked Hype theme selection UI with playlist-aware grouping, track counts, and safer handling of missing legacy playlist/track assignments.
 
 ## [1.1.0] - 2026-02-19
 ### Changed
