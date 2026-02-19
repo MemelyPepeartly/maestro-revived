@@ -7,16 +7,34 @@ on:
       - master
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
 
       - name: Get version
         id: vars
         run: echo "ver=$(jq -r '.version' module.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate version
+        run: |
+          if [ -z "${{ steps.vars.outputs.ver }}" ] || [ "${{ steps.vars.outputs.ver }}" = "null" ]; then
+            echo "module.json version is empty"
+            exit 1
+          fi
 
       - name: Check if tag exists
         id: check
@@ -38,9 +56,13 @@ jobs:
           manifest: https://github.com/${{ github.repository }}/releases/latest/download/module.json
           download: https://github.com/${{ github.repository }}/releases/download/v${{ steps.vars.outputs.ver }}/module.zip
 
+      - name: Build Module
+        if: steps.check.outputs.exists == 'false'
+        run: npm run build
+
       - name: Zip Module
         if: steps.check.outputs.exists == 'false'
-        run: zip -r ./module.zip . -x@.github/zip-exclude.lst
+        run: cd dist && zip -r ../module.zip .
 
       - name: Create Version Release
         if: steps.check.outputs.exists == 'false'
@@ -51,7 +73,7 @@ jobs:
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: './module.json, ./module.zip'
+          artifacts: './dist/module.json, ./module.zip'
           tag: v${{ steps.vars.outputs.ver }}
           body: Auto release for version v${{ steps.vars.outputs.ver }}
 
@@ -64,6 +86,6 @@ jobs:
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: './module.json, ./module.zip'
+          artifacts: './dist/module.json, ./module.zip'
           tag: latest
           body: Auto release for version v${{ steps.vars.outputs.ver }}

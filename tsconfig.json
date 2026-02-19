@@ -1,12 +1,18 @@
 {
     "compilerOptions": {
-        "allowJs": true,
-        "checkJs": true,
-        "experimentalDecorators": true,
-        "target": "ES2019",
-        "types": ["@league-of-foundry-developers/foundry-vtt-types"],
-        "moduleResolution": "node",
-        "strictNullChecks": true,
-        "outDir": "./out-js"
-    }
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "lib": ["ES2022", "DOM"],
+        "types": ["@league-of-foundry-developers/foundry-vtt-types", "jquery"],
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "strict": false,
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "noEmitOnError": true
+    },
+    "include": ["src/**/*.ts", "src/**/*.d.ts"],
+    "exclude": ["node_modules", "dist", "out", "out-js"]
 }

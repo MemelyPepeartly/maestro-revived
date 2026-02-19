@@ -3,13 +3,34 @@ name: Release Creation
 
 on: 
   release:
-    types: [published,unpublished]
+    types: [published, edited]
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: npm
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Validate version
+      run: |
+        VERSION=$(jq -r '.version' module.json)
+        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+          echo "module.json version is empty"
+          exit 1
+        fi
 
     #Substitute the Manifest and Download URLs in the module.json
     - name: Substitute Manifest and Download Links For Versioned Ones
@@ -22,8 +43,11 @@ jobs:
         manifest: https://github.com/${{github.repository}}/releases/latest/download/module.json
         download: https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.zip
 
+    - name: Build Module
+      run: npm run build
+
     # create a zip file with all files required by the module to add to the release
-    - run: zip -r ./module.zip . -x@.github/zip-exclude.lst
+    - run: cd dist && zip -r ../module.zip .
 
     # Create a release for this specific version
     - name: Update Release with Files
@@ -35,7 +59,7 @@ jobs:
         draft: false
         prerelease: false
         token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: './module.json, ./module.zip'
+        artifacts: './dist/module.json, ./module.zip'
         tag: ${{ github.event.release.tag_name }}
         body: ${{ github.event.release.body }}
 
@@ -43,13 +67,12 @@ jobs:
     - name: Create Release
       id: create_latest_release
       uses: ncipollo/release-action@v1
-      if: endsWith(github.ref, 'master')
       with:
         allowUpdates: true
         name: Latest
         draft: false
         prerelease: false
         token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: './module.json,./module.zip'
+        artifacts: './dist/module.json,./module.zip'
         tag: latest
         body: ${{ github.event.release.body }}

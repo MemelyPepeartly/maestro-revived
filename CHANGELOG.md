@@ -6,6 +6,22 @@
 3. A GM must be logged in for many of the Maestro functions to work due to underlying Foundry permission requirements.
 4. Game systems that do not include an Item Id reference in their item roll chat messages **cannot** be used with Item Tracks
 ---
+## [1.2.0] - 2026-02-19
+### Changed
+- Converted repository layout to TypeScript source only.
+- Removed committed runtime JavaScript files from root and `modules/`.
+- Added a build pipeline that emits Foundry-ready artifacts to `dist/`.
+- Updated GitHub release workflows to package from `dist/`.
+
+## [1.1.0] - 2026-02-19
+### Changed
+- Migrated source code to TypeScript with a `src/` source tree compiled back to runtime JS files.
+- Refactored module startup and hook registration for cleaner init/ready lifecycle handling.
+- Updated playback, Hype Track, Item Track, and Combat Track internals for improved stability on Foundry v13.
+- Refined migration routines to better handle legacy numeric track flags.
+- Updated release workflows to install dependencies and build before creating release artifacts.
+- Removed legacy `gulp`/`jsdoc` build artifacts and dependencies.
+
 ## [1.0.1] - 2025-07-27
 ### Changed
 - Updated module version and README shield

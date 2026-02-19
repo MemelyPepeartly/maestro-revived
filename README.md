@@ -49,6 +49,13 @@ Set a playlist or track to play when the Combat encounter begins.
 2. Click Install Module and search for `maestro` or paste in the following link: https://github.com/death-save/maestro/releases/latest/download/module.json
 3. Once the **Maestro** is installed, open your desired world and navigate to the `Game Settings` > `Configure Settings` > `Module Settings` and enable the settings you want!
 
+## Development
+
+1. Install dependencies: `npm install`
+2. Build TypeScript sources to `dist/`: `npm run build`
+3. Run type checks only: `npm run typecheck`
+4. Runtime JavaScript is generated in `dist/` and is not committed to source control.
+
 ## Issues/Feedback
 You can create an issue here: [Issue Log](https://github.com/death-save/maestro/issues) or contact me on [Discord](https://discord.gg/pqnn72VTmj)
 
