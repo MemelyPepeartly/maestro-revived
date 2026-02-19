@@ -8,6 +8,11 @@ type HypeFlags = {
     track?: string;
 };
 
+type HypeSelection = {
+    playlistId: string;
+    track: string;
+};
+
 function hasNumeric(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
 }
@@ -16,13 +21,21 @@ function isPlaybackMode(value: string): boolean {
     return value === DEFAULT_CONFIG.ItemTrack.playbackModes.all || value === DEFAULT_CONFIG.ItemTrack.playbackModes.random;
 }
 
+function normalizeSetting(value: unknown): string {
+    return typeof value === "string" ? value : "";
+}
+
 export default class HypeTrack {
     playlist: Playlist | null;
     pausedSounds: PlaylistSound[];
+    activeTrack: string | null;
+    activePlaylistId: string | null;
 
     constructor() {
         this.playlist = null;
         this.pausedSounds = [];
+        this.activeTrack = null;
+        this.activePlaylistId = null;
     }
 
     static async _onReady(): Promise<void> {
@@ -65,6 +78,100 @@ export default class HypeTrack {
         return flags as HypeFlags;
     }
 
+    private _resolveHypeSelection(actor: Actor | null | undefined): HypeSelection {
+        const flags = this._getActorHypeFlags(actor);
+        let playlistId = normalizeSetting(flags?.playlist);
+        let track = normalizeSetting(flags?.track);
+
+        const defaultPlaylist = normalizeSetting(game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultPlaylist));
+        const defaultTrack = normalizeSetting(game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultTrack));
+
+        if (!track) {
+            track = defaultTrack;
+        }
+
+        if (!playlistId) {
+            playlistId = defaultPlaylist || this.playlist?.id || "";
+        }
+
+        return { playlistId, track };
+    }
+
+    private _isTrackCurrentlyPlaying(selection: HypeSelection): boolean {
+        if (!selection.playlistId || !selection.track) {
+            return false;
+        }
+
+        const playlist = game.playlists.get(selection.playlistId);
+        if (!playlist) {
+            return false;
+        }
+
+        if (selection.track === DEFAULT_CONFIG.ItemTrack.playbackModes.all) {
+            return playlist.playing || playlist.sounds.contents.some((sound) => sound.playing);
+        }
+
+        if (selection.track === DEFAULT_CONFIG.ItemTrack.playbackModes.random) {
+            return playlist.sounds.contents.some((sound) => sound.playing);
+        }
+
+        return Boolean(playlist.sounds.get(selection.track)?.playing);
+    }
+
+    private _isSameActiveSelection(selection: HypeSelection): boolean {
+        return (
+            this.activeTrack === selection.track
+            && this.activePlaylistId === selection.playlistId
+            && this._isTrackCurrentlyPlaying(selection)
+        );
+    }
+
+    private _mergePausedSounds(sounds: PlaylistSound[]): void {
+        const existing = new Set(this.pausedSounds.map((sound) => `${sound.parent?.id ?? ""}:${sound.id}`));
+
+        for (const sound of sounds) {
+            const key = `${sound.parent?.id ?? ""}:${sound.id}`;
+            if (existing.has(key)) {
+                continue;
+            }
+
+            existing.add(key);
+            this.pausedSounds.push(sound);
+        }
+    }
+
+    private async _stopPlaylistPlayback(playlistId: string | null | undefined): Promise<void> {
+        if (!playlistId) {
+            return;
+        }
+
+        const playlist = game.playlists.get(playlistId);
+        if (!playlist) {
+            return;
+        }
+
+        if (playlist.playing) {
+            await playlist.stopAll();
+        }
+
+        const activeSounds = playlist.sounds.contents.filter((sound) => sound.playing || Boolean(sound.pausedTime));
+        if (activeSounds.length) {
+            await playlist.updateEmbeddedDocuments(
+                "PlaylistSound",
+                activeSounds.map((sound) => ({ _id: sound.id, playing: false, pausedTime: null }))
+            );
+        }
+    }
+
+    private async _stopActiveHypePlayback(): Promise<void> {
+        if (this.activePlaylistId) {
+            await this._stopPlaylistPlayback(this.activePlaylistId);
+        }
+
+        this.activePlaylistId = null;
+        this.activeTrack = null;
+    }
+
     async _processHype(combat: Combat, update: DeepPartial<Combat.Source>): Promise<void> {
         const turn = (update as Record<string, unknown>).turn;
         if (
@@ -77,37 +184,50 @@ export default class HypeTrack {
             return;
         }
 
-        if (this.playlist.playing) {
-            await this.playlist.stopAll();
-        }
+        const selection = this._resolveHypeSelection(combat.combatant?.actor ?? null);
 
-        const combatantActor = combat.combatant?.actor ?? null;
-        const flags = this._getActorHypeFlags(combatantActor);
-        const track = flags?.track ?? "";
-        const playlistId = flags?.playlist ?? this.playlist.id;
-
-        if (!track) {
+        // No actor/default hype track for this turn: stop hype and resume previous non-hype audio.
+        if (!selection.track || !selection.playlistId) {
+            await this._stopActiveHypePlayback();
             await this._resumeOthers();
             return;
         }
 
+        if (this._isSameActiveSelection(selection)) {
+            return;
+        }
+
+        await this._stopActiveHypePlayback();
+
         const pauseOthers = game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.pauseOthers);
         if (pauseOthers) {
             const paused = await Playback.pauseAll();
-            this.pausedSounds = this.pausedSounds.concat(paused);
+            this._mergePausedSounds(paused);
+        } else if (this.pausedSounds.length) {
+            await this._resumeOthers();
         }
 
-        if (track === DEFAULT_CONFIG.ItemTrack.playbackModes.all) {
-            await Playback.playPlaylist(playlistId);
+        if (selection.track === DEFAULT_CONFIG.ItemTrack.playbackModes.all) {
+            await Playback.playPlaylist(selection.playlistId);
         } else {
-            await Playback.playTrack(track, playlistId);
+            await Playback.playTrack(selection.track, selection.playlistId);
         }
 
-        if (!isPlaybackMode(track) && this.pausedSounds.length) {
-            const playlist = game.playlists.get(playlistId);
-            const sound = playlist?.sounds.get(track);
+        this.activeTrack = selection.track;
+        this.activePlaylistId = selection.playlistId;
+
+        if (!isPlaybackMode(selection.track) && this.pausedSounds.length) {
+            const playlist = game.playlists.get(selection.playlistId);
+            const sound = playlist?.sounds.get(selection.track);
 
             sound?.sound?.once("end", () => {
+                const unchanged = this.activeTrack === selection.track && this.activePlaylistId === selection.playlistId;
+                if (!unchanged) {
+                    return;
+                }
+
+                this.activeTrack = null;
+                this.activePlaylistId = null;
                 void this._resumeOthers();
             });
         }
@@ -202,47 +322,36 @@ export default class HypeTrack {
             return;
         }
 
-        const hypeTrack = this._getActorHypeTrack(actor);
-        if (!hypeTrack) {
+        const selection = this._resolveHypeSelection(actor);
+        if (!selection.track) {
             if (warn) {
                 ui.notifications?.warn(game.i18n.localize("MAESTRO.HYPE-TRACK.PlayHype.NoTrack"));
             }
             return;
         }
 
-        const playlist = this.playlist
-            ?? game.playlists.contents.find(
-                (entry) => entry.name === DEFAULT_CONFIG.HypeTrack.playlistName || entry.sounds.contents.some((sound) => sound.id === hypeTrack)
-            )
-            ?? null;
-
-        if (!playlist) {
+        if (!selection.playlistId) {
             if (warn) {
                 ui.notifications?.warn(game.i18n.localize("MAESTRO.HYPE-TRACK.PlayHype.NoPlaylist"));
             }
             return;
         }
 
-        return Playback.playTrack(hypeTrack, playlist.id);
-    }
-
-    async _stopHypeTrack(): Promise<void> {
-        if (!this.playlist || !isFirstGM()) {
+        if (selection.track === DEFAULT_CONFIG.ItemTrack.playbackModes.all) {
+            await Playback.playPlaylist(selection.playlistId);
             return;
         }
 
-        if (this.playlist.playing) {
-            await this.playlist.stopAll();
+        return Playback.playTrack(selection.track, selection.playlistId);
+    }
+
+    async _stopHypeTrack(): Promise<void> {
+        if (!isFirstGM()) {
+            return;
         }
 
-        const activeSounds = this.playlist.sounds.contents.filter((sound) => sound.playing || Boolean(sound.pausedTime));
-        if (activeSounds.length) {
-            await this.playlist.updateEmbeddedDocuments(
-                "PlaylistSound",
-                activeSounds.map((sound) => ({ _id: sound.id, playing: false, pausedTime: null }))
-            );
-        }
-
+        await this._stopActiveHypePlayback();
+        await this._resumeOthers();
         ui.playlists?.render();
     }
 }
@@ -306,4 +415,59 @@ class HypeTrackActorForm extends FormApplication<FormApplicationOptions, HypeTra
     }
 }
 
+interface HypeTrackDefaultsFormData {
+    defaultPlaylist: string;
+    defaultTrack: string;
+}
 
+export class HypeTrackDefaultForm extends FormApplication<FormApplicationOptions, HypeTrackDefaultsFormData, {}>
+{
+    data: HypeTrackDefaultsFormData;
+
+    constructor(data?: Partial<HypeTrackDefaultsFormData>, options?: Partial<FormApplicationOptions>) {
+        super(data ?? {}, options ?? {});
+        this.data = {
+            defaultPlaylist: data?.defaultPlaylist ?? normalizeSetting(game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultPlaylist)),
+            defaultTrack: data?.defaultTrack ?? normalizeSetting(game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultTrack))
+        };
+    }
+
+    static override get defaultOptions(): FormApplicationOptions {
+        return mergeObject(super.defaultOptions, {
+            id: "hype-track-default-form",
+            title: "Default Hype Track",
+            template: DEFAULT_CONFIG.HypeTrack.defaultFormTemplatePath,
+            classes: ["sheet"],
+            width: 500
+        });
+    }
+
+    override getData(): {
+        defaultPlaylist: string;
+        defaultTrack: string;
+        playlists: Playlist[];
+        defaultPlaylistTracks: PlaylistSound[];
+    } {
+        return {
+            defaultPlaylist: this.data.defaultPlaylist,
+            defaultTrack: this.data.defaultTrack,
+            playlists: game.playlists.contents,
+            defaultPlaylistTracks: Playback.getPlaylistSounds(this.data.defaultPlaylist)
+        };
+    }
+
+    protected override async _updateObject(_event: Event, formData: Record<string, unknown>): Promise<void> {
+        await game.settings.set(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultPlaylist, String(formData["default-playlist"] ?? ""));
+        await game.settings.set(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultTrack, String(formData["default-track"] ?? ""));
+    }
+
+    override activateListeners(html: JQuery): void {
+        super.activateListeners(html);
+
+        const playlistSelect = html.find(".default-playlist-select");
+        playlistSelect.on("change", (event) => {
+            this.data.defaultPlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
+            this.render();
+        });
+    }
+}

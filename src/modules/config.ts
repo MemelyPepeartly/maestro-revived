@@ -18,6 +18,7 @@ export const DEFAULT_CONFIG = {
         buttonIcon: "fas fa-music",
         buttonText: " Hype",
         aTitle: "Change Actor Hype Track",
+        defaultFormTemplatePath: "./modules/maestro/templates/hype-track-default-form.html",
         flagNames: {
             playlist: "playlist",
             track: "track"
@@ -97,7 +98,10 @@ export const SETTINGS_KEYS = {
 
     HypeTrack: {
         enable: "enableHypeTrack",
-        pauseOthers: "hypeTrackPauseOthers"
+        pauseOthers: "hypeTrackPauseOthers",
+        defaultPlaylist: "defaultHypeTrackPlaylist",
+        defaultTrack: "defaultHypeTrackTrack",
+        defaultMenu: "hypeTrackDefaultsMenu"
     },
 
     CombatTrack: {

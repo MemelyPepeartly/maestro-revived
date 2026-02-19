@@ -6,12 +6,16 @@
 3. A GM must be logged in for many of the Maestro functions to work due to underlying Foundry permission requirements.
 4. Game systems that do not include an Item Id reference in their item roll chat messages **cannot** be used with Item Tracks
 ---
-## [1.2.0] - 2026-02-19
+## [2.0.0] - 2026-02-19
 ### Changed
 - Converted repository layout to TypeScript source only.
 - Removed committed runtime JavaScript files from root and `modules/`.
 - Added a build pipeline that emits Foundry-ready artifacts to `dist/`.
 - Updated GitHub release workflows to package from `dist/`.
+- Bumped to major versioning for the remaster release line.
+- Hype Track now stops prior hype playback cleanly on turn changes (no paused-track buildup in playlist UI).
+- Hype Track now preserves uninterrupted playback when consecutive combatants share the same hype track.
+- Added configurable default Hype playlist/track settings used when an actor has no explicit Hype assignment.
 
 ## [1.1.0] - 2026-02-19
 ### Changed

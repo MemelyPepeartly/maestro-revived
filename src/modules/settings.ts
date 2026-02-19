@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { DEFAULT_CONFIG, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
+import { HypeTrackDefaultForm } from "./hype-track.js";
 import { _checkForCriticalPlaylist, _checkForFailurePlaylist, MaestroConfigForm } from "./misc.js";
 
 function resolvePlaylistIdByName(name: string): string {
@@ -26,6 +27,33 @@ export async function registerModuleSettings(): Promise<void> {
         type: Boolean,
         default: false,
         config: true
+    });
+
+    game.settings.register(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultPlaylist, {
+        name: "Default Hype Playlist",
+        hint: "Fallback playlist used when an actor has no explicit Hype playlist.",
+        scope: "world",
+        type: String,
+        default: "",
+        config: false
+    });
+
+    game.settings.register(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultTrack, {
+        name: "Default Hype Track",
+        hint: "Fallback track (or mode) used when an actor has no Hype track.",
+        scope: "world",
+        type: String,
+        default: "",
+        config: false
+    });
+
+    game.settings.registerMenu(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultMenu, {
+        name: "Default Hype Track",
+        label: "Configure",
+        hint: "Configure fallback Hype playlist and track when an actor has none.",
+        icon: "fas fa-music",
+        type: HypeTrackDefaultForm,
+        restricted: true
     });
 
     game.settings.register(MODULE_NAME, SETTINGS_KEYS.ItemTrack.enable, {

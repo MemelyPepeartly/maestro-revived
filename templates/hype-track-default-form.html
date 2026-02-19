@@ -1,0 +1,35 @@
+<form autocomplete="off" onsubmit="event.preventDefault();">
+    <div class="form-group">
+        <label>Default Hype Playlist</label>
+        <select name="default-playlist" class="default-playlist-select" default="">
+            {{#select defaultPlaylist}}
+                <option value="">{{localize "MAESTRO.FORM.SelectNone"}}</option>
+                {{#each playlists}}
+                <option value="{{this.id}}">{{this.name}}</option>
+                {{/each}}
+            {{/select}}
+        </select>
+        <p class="notes">Used when the current combatant has no playlist set in their Hype Track flags.</p>
+    </div>
+
+    <div class="form-group">
+        <label>Default Hype Track</label>
+        <select name="default-track" class="default-track-select" default="">
+            {{#select defaultTrack}}
+                <option value="">{{localize "MAESTRO.FORM.SelectNone"}}</option>
+                {{#if defaultPlaylistTracks}}
+                <option value="random-track">{{localize "MAESTRO.FORM.PlayRandom"}}</option>
+                <option value="play-all">{{localize "MAESTRO.FORM.PlayAll"}}</option>
+                {{/if}}
+                {{#each defaultPlaylistTracks}}
+                <option value="{{this.id}}">{{this.name}}</option>
+                {{/each}}
+            {{/select}}
+        </select>
+        <p class="notes">Used when the current combatant has no track set in their Hype Track flags.</p>
+    </div>
+
+    <button type="submit" name="submit">
+        <i class="far fa-save"></i> {{localize "MAESTRO.FORM.SaveSelections"}}
+    </button>
+</form>
