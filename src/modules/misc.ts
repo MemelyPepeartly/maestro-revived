@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { DEFAULT_CONFIG, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
+import { MaestroFormApplication, maestroFormPart } from "./form-application-v2.js";
 import * as Playback from "./playback.js";
 
 interface CriticalTrackSettings {
@@ -52,11 +53,11 @@ export function _onRenderPlaylistDirectory(_app: unknown, html: JQuery | HTMLEle
     _addPlaylistLoopToggle(html);
 }
 
-export class MaestroConfigForm extends FormApplication<FormApplicationOptions, CriticalTrackSettings, {}>
+export class MaestroConfigForm extends MaestroFormApplication
 {
     data: CriticalTrackSettings;
 
-    constructor(data?: Partial<CriticalTrackSettings>, options?: Partial<FormApplicationOptions>) {
+    constructor(data?: Partial<CriticalTrackSettings>, options?: Record<string, unknown>) {
         super(data ?? {}, options ?? {});
 
         const base = getCriticalTrackSettings();
@@ -68,15 +69,19 @@ export class MaestroConfigForm extends FormApplication<FormApplicationOptions, C
         };
     }
 
-    static override get defaultOptions(): FormApplicationOptions {
-        return mergeObject(super.defaultOptions, {
-            id: "maestro-config",
-            title: DEFAULT_CONFIG.Misc.maestroConfigTitle,
-            template: DEFAULT_CONFIG.Misc.maestroConfigTemplatePath,
-            classes: ["sheet"],
+    static override DEFAULT_OPTIONS = {
+        id: "maestro-config",
+        window: {
+            title: DEFAULT_CONFIG.Misc.maestroConfigTitle
+        },
+        position: {
             width: 500
-        });
-    }
+        }
+    };
+
+    static override PARTS = {
+        body: maestroFormPart(DEFAULT_CONFIG.Misc.maestroConfigTemplatePath)
+    };
 
     override getData(): {
         playlists: Playlist[];
@@ -116,14 +121,14 @@ export class MaestroConfigForm extends FormApplication<FormApplicationOptions, C
         if (criticalPlaylistSelect.length > 0) {
             criticalPlaylistSelect.on("change", (event) => {
                 this.data.criticalSuccessPlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
-                this.render();
+                void this.render({ force: true });
             });
         }
 
         if (failurePlaylistSelect.length > 0) {
             failurePlaylistSelect.on("change", (event) => {
                 this.data.criticalFailurePlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
-                this.render();
+                void this.render({ force: true });
             });
         }
     }

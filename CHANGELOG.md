@@ -6,6 +6,11 @@
 3. A GM must be logged in for many of the Maestro functions to work due to underlying Foundry permission requirements.
 4. Game systems that do not include an Item Id reference in their item roll chat messages **cannot** be used with Item Tracks
 ---
+## [2.1.1] - 2026-04-30
+### Fixed
+- Migrated Maestro configuration dialogs from deprecated `FormApplication` to V14 `ApplicationV2` form apps.
+- Fixed Hype Track, Item Track, Combat Track, and Maestro config dialogs failing to open because global `mergeObject` is unavailable in V14.
+
 ## [2.1.0] - 2026-04-30
 ### Changed
 - Updated the manifest metadata for Foundry VTT v14.360.

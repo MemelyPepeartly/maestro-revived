@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { DEFAULT_CONFIG, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
+import { MaestroFormApplication, maestroFormPart } from "./form-application-v2.js";
 import { isFirstGM } from "./misc.js";
 import * as Playback from "./playback.js";
 
@@ -249,7 +250,7 @@ export default class ItemTrack {
         return game.actors.get(actor.id)?.items?.get(itemId) ?? null;
     }
 
-    private _openTrackForm(item: Item, track: string, playlist: string, options: Partial<FormApplicationOptions>): void {
+    private _openTrackForm(item: Item, track: string, playlist: string, options: Record<string, unknown>): void {
         new ItemTrackForm(
             item,
             {
@@ -258,7 +259,7 @@ export default class ItemTrack {
                 playlists: game.playlists.contents
             },
             options
-        ).render(true);
+        ).render({ force: true });
     }
 
     async setItemFlags(item: Item, playlistId: string, trackId: string): Promise<Item | undefined> {
@@ -279,26 +280,30 @@ interface ItemTrackFormPayload {
     playlists: Playlist[];
 }
 
-class ItemTrackForm extends FormApplication<FormApplicationOptions, ItemTrackFormPayload, {}>
+class ItemTrackForm extends MaestroFormApplication
 {
     item: Item;
     data: ItemTrackFormPayload;
 
-    constructor(item: Item, data: ItemTrackFormPayload, options?: Partial<FormApplicationOptions>) {
+    constructor(item: Item, data: ItemTrackFormPayload, options?: Record<string, unknown>) {
         super(data, options ?? {});
         this.item = item;
         this.data = data;
     }
 
-    static override get defaultOptions(): FormApplicationOptions {
-        return mergeObject(super.defaultOptions, {
-            id: "item-track-form",
-            title: DEFAULT_CONFIG.ItemTrack.aTitle,
-            template: DEFAULT_CONFIG.ItemTrack.templatePath,
-            classes: ["sheet"],
+    static override DEFAULT_OPTIONS = {
+        id: "item-track-form",
+        window: {
+            title: DEFAULT_CONFIG.ItemTrack.aTitle
+        },
+        position: {
             width: 500
-        });
-    }
+        }
+    };
+
+    static override PARTS = {
+        body: maestroFormPart(DEFAULT_CONFIG.ItemTrack.templatePath)
+    };
 
     override getData(): {
         playlist: string;
@@ -329,7 +334,7 @@ class ItemTrackForm extends FormApplication<FormApplicationOptions, ItemTrackFor
         if (playlistSelect.length > 0) {
             playlistSelect.on("change", (event) => {
                 this.data.currentPlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
-                this.render();
+                void this.render({ force: true });
             });
         }
     }

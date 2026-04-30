@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { DEFAULT_CONFIG, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
+import { MaestroFormApplication, maestroFormPart } from "./form-application-v2.js";
 import { isFirstGM } from "./misc.js";
 import * as Playback from "./playback.js";
 
@@ -342,7 +343,7 @@ export default class HypeTrack {
         });
     }
 
-    private _openTrackForm(actor: Actor, flags: HypeFlags | null, options: Partial<FormApplicationOptions>): void {
+    private _openTrackForm(actor: Actor, flags: HypeFlags | null, options: Record<string, unknown>): void {
         new HypeTrackActorForm(
             actor,
             {
@@ -350,7 +351,7 @@ export default class HypeTrack {
                 playlist: flags?.playlist ?? this.playlist?.id ?? ""
             },
             options
-        ).render(true);
+        ).render({ force: true });
     }
 
     async playHype(
@@ -425,26 +426,30 @@ interface PlaylistOptionView {
     soundCount: number;
 }
 
-class HypeTrackActorForm extends FormApplication<FormApplicationOptions, HypeTrackFormData, {}>
+class HypeTrackActorForm extends MaestroFormApplication
 {
     actor: Actor;
     data: HypeTrackFormData;
 
-    constructor(actor: Actor, data: HypeTrackFormData, options?: Partial<FormApplicationOptions>) {
+    constructor(actor: Actor, data: HypeTrackFormData, options?: Record<string, unknown>) {
         super(data, options ?? {});
         this.actor = actor;
         this.data = data;
     }
 
-    static override get defaultOptions(): FormApplicationOptions {
-        return mergeObject(super.defaultOptions, {
-            id: "hype-track-form",
-            title: DEFAULT_CONFIG.HypeTrack.aTitle,
-            template: DEFAULT_CONFIG.HypeTrack.templatePath,
-            classes: ["sheet"],
+    static override DEFAULT_OPTIONS = {
+        id: "hype-track-form",
+        window: {
+            title: DEFAULT_CONFIG.HypeTrack.aTitle
+        },
+        position: {
             width: 560
-        });
-    }
+        }
+    };
+
+    static override PARTS = {
+        body: maestroFormPart(DEFAULT_CONFIG.HypeTrack.templatePath)
+    };
 
     private _buildPlaylistOptions(): {
         activePlaylists: PlaylistOptionView[];
@@ -592,7 +597,7 @@ class HypeTrackActorForm extends FormApplication<FormApplicationOptions, HypeTra
                 }
             }
 
-            this.render();
+            void this.render({ force: true });
         });
     }
 }
@@ -602,11 +607,11 @@ interface HypeTrackDefaultsFormData {
     defaultTrack: string;
 }
 
-export class HypeTrackDefaultForm extends FormApplication<FormApplicationOptions, HypeTrackDefaultsFormData, {}>
+export class HypeTrackDefaultForm extends MaestroFormApplication
 {
     data: HypeTrackDefaultsFormData;
 
-    constructor(data?: Partial<HypeTrackDefaultsFormData>, options?: Partial<FormApplicationOptions>) {
+    constructor(data?: Partial<HypeTrackDefaultsFormData>, options?: Record<string, unknown>) {
         super(data ?? {}, options ?? {});
         this.data = {
             defaultPlaylist: data?.defaultPlaylist ?? normalizeSetting(game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.defaultPlaylist)),
@@ -614,15 +619,19 @@ export class HypeTrackDefaultForm extends FormApplication<FormApplicationOptions
         };
     }
 
-    static override get defaultOptions(): FormApplicationOptions {
-        return mergeObject(super.defaultOptions, {
-            id: "hype-track-default-form",
-            title: "Default Hype Track",
-            template: DEFAULT_CONFIG.HypeTrack.defaultFormTemplatePath,
-            classes: ["sheet"],
+    static override DEFAULT_OPTIONS = {
+        id: "hype-track-default-form",
+        window: {
+            title: "Default Hype Track"
+        },
+        position: {
             width: 500
-        });
-    }
+        }
+    };
+
+    static override PARTS = {
+        body: maestroFormPart(DEFAULT_CONFIG.HypeTrack.defaultFormTemplatePath)
+    };
 
     override getData(): {
         defaultPlaylist: string;
@@ -649,7 +658,7 @@ export class HypeTrackDefaultForm extends FormApplication<FormApplicationOptions
         const playlistSelect = html.find(".default-playlist-select");
         playlistSelect.on("change", (event) => {
             this.data.defaultPlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
-            this.render();
+            void this.render({ force: true });
         });
     }
 }

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { DEFAULT_CONFIG, MODULE_LABEL, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
+import { MaestroFormApplication, maestroFormPart } from "./form-application-v2.js";
 import { isFirstGM } from "./misc.js";
 import * as Playback from "./playback.js";
 
@@ -247,7 +248,7 @@ export default class CombatTrack {
         combat: Combat | null,
         track: string,
         playlist: string,
-        options: Partial<FormApplicationOptions>
+        options: Record<string, unknown>
     ): void {
         new CombatTrackForm(
             combat,
@@ -259,7 +260,7 @@ export default class CombatTrack {
                 playlists: game.playlists.contents
             },
             options
-        ).render(true);
+        ).render({ force: true });
     }
 
     async setCombatFlags(combat: Combat, playlistId: string, trackId: string): Promise<Combat | undefined> {
@@ -278,27 +279,32 @@ interface CombatTrackFormData {
     playlists: Playlist[];
 }
 
-class CombatTrackForm extends FormApplication<FormApplicationOptions, CombatTrackFormData, {}>
+class CombatTrackForm extends MaestroFormApplication
 {
     combat: Combat | null;
     data: CombatTrackFormData;
+    activeTab: string;
 
-    constructor(combat: Combat | null, data: CombatTrackFormData, options?: Partial<FormApplicationOptions>) {
+    constructor(combat: Combat | null, data: CombatTrackFormData, options?: Record<string, unknown>) {
         super(data, options ?? {});
         this.combat = combat;
         this.data = data;
+        this.activeTab = combat ? "encounter" : "defaults";
     }
 
-    static override get defaultOptions(): FormApplicationOptions {
-        return mergeObject(super.defaultOptions, {
-            id: "combat-track-form",
-            title: game.i18n.localize(DEFAULT_CONFIG.CombatTrack.aTitle),
-            template: DEFAULT_CONFIG.CombatTrack.templatePath,
-            classes: ["sheet"],
-            width: 500,
-            tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: game.combat ? "encounter" : "defaults" }]
-        });
-    }
+    static override DEFAULT_OPTIONS = {
+        id: "combat-track-form",
+        window: {
+            title: DEFAULT_CONFIG.CombatTrack.aTitle
+        },
+        position: {
+            width: 500
+        }
+    };
+
+    static override PARTS = {
+        body: maestroFormPart(DEFAULT_CONFIG.CombatTrack.templatePath)
+    };
 
     override getData(): {
         combat: Combat | null;
@@ -312,6 +318,8 @@ class CombatTrackForm extends FormApplication<FormApplicationOptions, CombatTrac
     } {
         return {
             combat: this.combat,
+            defaultsTabClass: this.activeTab === "defaults" ? "active" : "",
+            encounterTabClass: this.activeTab === "encounter" ? "active" : "",
             defaultPlaylist: this.data.defaultPlaylist,
             defaultTrack: this.data.defaultTrack,
             defaultPlaylistTracks: Playback.getPlaylistSounds(this.data.defaultPlaylist),
@@ -346,20 +354,29 @@ class CombatTrackForm extends FormApplication<FormApplicationOptions, CombatTrac
     override activateListeners(html: JQuery): void {
         super.activateListeners(html);
 
+        html.find(".sheet-tabs [data-tab]").on("click", (event) => {
+            const nextTab = String((event.currentTarget as HTMLElement).dataset.tab ?? "defaults");
+            this.activeTab = nextTab;
+            html.find(".sheet-tabs [data-tab]").removeClass("active");
+            html.find(`.sheet-tabs [data-tab="${nextTab}"]`).addClass("active");
+            html.find(".content .tab").removeClass("active");
+            html.find(`.content .tab[data-tab="${nextTab}"]`).addClass("active");
+        });
+
         const defaultPlaylistSelect = html.find(".default-playlist-select");
         const playlistSelect = html.find(".playlist-select");
 
         if (defaultPlaylistSelect.length > 0) {
             defaultPlaylistSelect.on("change", (event) => {
                 this.data.defaultPlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
-                this.render();
+                void this.render({ force: true });
             });
         }
 
         if (playlistSelect.length > 0) {
             playlistSelect.on("change", (event) => {
                 this.data.currentPlaylist = String((event.currentTarget as HTMLSelectElement).value ?? "");
-                this.render();
+                void this.render({ force: true });
             });
         }
     }

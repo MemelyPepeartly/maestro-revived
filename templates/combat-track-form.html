@@ -1,11 +1,10 @@
-<form autocomplete="off" onsubmit="event.preventDefault();">
-    <nav class="sheet-tabs tabs" data-group="primary">
-        <a class="item active" data-tab="defaults"><i class="fas fa-cog"></i> {{ localize "MAESTRO.COMBAT-TRACK.FormDefaultsHeading" }}</a>
-        {{#if combat}}<a class="item" data-tab="encounter"><i class="fas fa-fist-raised"></i> {{ localize "MAESTRO.COMBAT-TRACK.FormEncounterHeading" }}</a>{{/if}}
+<nav class="sheet-tabs tabs" data-group="primary">
+        <a class="item {{defaultsTabClass}}" data-tab="defaults"><i class="fas fa-cog"></i> {{ localize "MAESTRO.COMBAT-TRACK.FormDefaultsHeading" }}</a>
+        {{#if combat}}<a class="item {{encounterTabClass}}" data-tab="encounter"><i class="fas fa-fist-raised"></i> {{ localize "MAESTRO.COMBAT-TRACK.FormEncounterHeading" }}</a>{{/if}}
     </nav>
 
     <section class="content">
-        <div class="tab defaults flexcol" data-group="primary" data-tab="defaults">
+        <div class="tab defaults flexcol {{defaultsTabClass}}" data-group="primary" data-tab="defaults">
         <div class="form-group">
             <label>{{localize "MAESTRO.COMBAT-TRACK.FormDefaultPlaylistLabel"}}</label>
             <select name="default-playlist" class="default-playlist-select" title="{{localize "MAESTRO.COMBAT-TRACK.FormDefaultPlaylistTooltip"}}" default="">
@@ -39,7 +38,7 @@
     </div>
 
     {{#if combat}}
-    <div class="tab encounter flexcol" data-group="primary" data-tab="encounter">
+    <div class="tab encounter flexcol {{encounterTabClass}}" data-group="primary" data-tab="encounter">
         <div class="form-group">
             <label>{{localize "MAESTRO.COMBAT-TRACK.FormPlaylistLabel"}}</label>
             <select name="playlist" class="playlist-select" title="{{localize "MAESTRO.COMBAT-TRACK.FormPlaylistTooltip"}}" default="default">
@@ -81,5 +80,3 @@
             <i class="far fa-save"></i> Save
         </button>
     </span>
-    
-</form>
