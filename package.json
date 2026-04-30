@@ -1,10 +1,10 @@
 {
-  "name": "maestro",
-  "version": "2.0.1",
+  "name": "maestro-revived",
+  "version": "2.1.0",
   "description": "Adds new audio features to Foundry VTT",
   "main": "dist/maestro.js",
   "devDependencies": {
-    "@league-of-foundry-developers/foundry-vtt-types": "13.346.0-beta.20250725145454",
+    "@league-of-foundry-developers/foundry-vtt-types": "13.346.0-beta.20250812191140",
     "@types/jquery": "^3.5.6",
     "eslint": "^6.8.0",
     "typescript": "^5.4.0"
@@ -17,12 +17,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/death-save/maestro.git"
+    "url": "git+https://github.com/MemelyPepeartly/maestro-revived.git"
   },
   "author": "Evan Clarke (errational)",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url": "https://github.com/death-save/maestro/issues"
+    "url": "https://github.com/MemelyPepeartly/maestro-revived/issues"
   },
-  "homepage": "https://github.com/death-save/maestro#readme"
+  "homepage": "https://github.com/MemelyPepeartly/maestro-revived#readme"
 }

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { DEFAULT_CONFIG, FLAGS, MODULE_LABEL, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
+import { DEFAULT_CONFIG, MODULE_LABEL, MODULE_NAME, SETTINGS_KEYS } from "./config.js";
 import { isFirstGM } from "./misc.js";
 import * as Playback from "./playback.js";
 
@@ -8,11 +8,32 @@ type CombatFlags = {
     track?: string;
 };
 
-function isCombatStarted(combat: Combat, update: Record<string, unknown>): boolean {
-    const previousRound = Number(combat.round ?? 0);
-    const nextRound = Number(update.round ?? previousRound);
-    return previousRound === 0 && nextRound === 1;
-}
+type CombatHistory = {
+    round?: number;
+    turn?: number | null;
+};
+
+type HeaderButton = {
+    class: string;
+    icon: string;
+    label: string;
+    onclick: (event: Event) => void;
+};
+
+type HeaderControl = {
+    action: string;
+    classes?: string;
+    icon?: string;
+    label: string;
+    onClick?: (event: Event, target?: HTMLElement) => void;
+    visible?: boolean;
+};
+
+type ApplicationV2Like = {
+    constructor?: {
+        name?: string;
+    };
+};
 
 export default class CombatTrack {
     playlist: Playlist | null;
@@ -29,20 +50,26 @@ export default class CombatTrack {
         }
     }
 
-    static _onPreUpdateCombat(combat: Combat, update: DeepPartial<Combat.Source>, options: Record<string, unknown>): void {
-        CombatTrack._checkCombatStart(combat, update as Record<string, unknown>, options);
-    }
-
-    static _onUpdateCombat(combat: Combat, _update: DeepPartial<Combat.Source>, options: Record<string, unknown>): void {
-        void game.maestro.combatTrack?._getCombatTrack(combat, options);
+    static _onCombatTurnChange(combat: Combat, prior: CombatHistory, current: CombatHistory): void {
+        const previousRound = Number(prior.round ?? 0);
+        const nextRound = Number(current.round ?? combat.round ?? 0);
+        if (previousRound === 0 && nextRound > 0) {
+            void game.maestro.combatTrack?._getCombatTrack(combat);
+        }
     }
 
     static _onDeleteCombat(combat: Combat): void {
         void game.maestro.combatTrack?._stopCombatTrack(combat);
     }
 
-    static _onRenderCombatTrackerConfig(app: Application, html: JQuery): void {
-        void CombatTrack._addCombatTrackButton(app, html);
+    static _onGetCombatTrackerConfigHeaderButtons(_app: Application, buttons: HeaderButton[]): void {
+        CombatTrack._addCombatTrackHeaderButton(buttons);
+    }
+
+    static _onGetApplicationV2HeaderControls(app: ApplicationV2Like, controls: HeaderControl[]): void {
+        if (CombatTrack._isCombatTrackerConfig(app)) {
+            CombatTrack._addCombatTrackHeaderControl(controls);
+        }
     }
 
     async _checkForCombatTracksPlaylist(): Promise<void> {
@@ -55,14 +82,6 @@ export default class CombatTrack {
 
         const existing = game.playlists.getName(DEFAULT_CONFIG.CombatTrack.playlistName);
         this.playlist = existing ?? (await Playlist.create({ name: DEFAULT_CONFIG.CombatTrack.playlistName }));
-    }
-
-    static _checkCombatStart(combat: Combat, update: Record<string, unknown>, options: Record<string, unknown>): void {
-        if (!isFirstGM() || !isCombatStarted(combat, update)) {
-            return;
-        }
-
-        setProperty(options, `${MODULE_NAME}.${FLAGS.CombatTrack.combatStarted}`, true);
     }
 
     private static getCombatFlags(combat: Combat): CombatFlags | null {
@@ -85,9 +104,8 @@ export default class CombatTrack {
         };
     }
 
-    async _getCombatTrack(combat: Combat, options: Record<string, unknown>): Promise<void> {
-        const combatStarted = getProperty(options, `${MODULE_NAME}.${FLAGS.CombatTrack.combatStarted}`);
-        if (!isFirstGM() || !combatStarted) {
+    async _getCombatTrack(combat: Combat): Promise<void> {
+        if (!isFirstGM()) {
             return;
         }
 
@@ -155,7 +173,7 @@ export default class CombatTrack {
         this.pausedSounds = [];
     }
 
-    static async _addCombatTrackButton(app: Application, html: JQuery): Promise<void> {
+    static _addCombatTrackHeaderButton(buttons: HeaderButton[]): void {
         if (!game.user.isGM) {
             return;
         }
@@ -165,26 +183,53 @@ export default class CombatTrack {
             return;
         }
 
-        if (html.find(`.${DEFAULT_CONFIG.CombatTrack.name}`).length > 0) {
+        if (buttons.some((button) => button.class === DEFAULT_CONFIG.CombatTrack.name)) {
             return;
         }
 
-        const button = $(
-            `<a class="${DEFAULT_CONFIG.CombatTrack.name}" title="${MODULE_LABEL} ${game.i18n.localize(DEFAULT_CONFIG.CombatTrack.aTitle)}">` +
-            `<i class="${DEFAULT_CONFIG.CombatTrack.buttonIcon}"></i>` +
-            `<span>${DEFAULT_CONFIG.CombatTrack.buttonText}</span>` +
-            "</a>"
-        );
-
-        const header = html.find(".window-header");
-        const closeButton = header.find("a.close");
-        closeButton.before(button);
-
-        button.on("click", () => {
-            void CombatTrack._onCombatTrackButtonClick();
+        buttons.unshift({
+            class: DEFAULT_CONFIG.CombatTrack.name,
+            icon: DEFAULT_CONFIG.CombatTrack.buttonIcon,
+            label: `${MODULE_LABEL} ${game.i18n.localize(DEFAULT_CONFIG.CombatTrack.aTitle)}`,
+            onclick: () => {
+                void CombatTrack._onCombatTrackButtonClick();
+            }
         });
+    }
 
-        await app.setPosition({ height: "auto" });
+    static _addCombatTrackHeaderControl(controls: HeaderControl[]): void {
+        if (!game.user.isGM) {
+            return;
+        }
+
+        const enabled = game.settings.get(MODULE_NAME, SETTINGS_KEYS.CombatTrack.enable);
+        if (!enabled) {
+            return;
+        }
+
+        if (controls.some((control) => control.action === DEFAULT_CONFIG.CombatTrack.name)) {
+            return;
+        }
+
+        const label = `${MODULE_LABEL} ${game.i18n.localize(DEFAULT_CONFIG.CombatTrack.aTitle)}`;
+        controls.unshift({
+            action: DEFAULT_CONFIG.CombatTrack.name,
+            classes: DEFAULT_CONFIG.CombatTrack.name,
+            icon: DEFAULT_CONFIG.CombatTrack.buttonIcon,
+            label,
+            onClick: () => {
+                void CombatTrack._onCombatTrackButtonClick();
+            }
+        });
+    }
+
+    private static _isCombatTrackerConfig(app: ApplicationV2Like): boolean {
+        const CombatTrackerConfig = globalThis.foundry?.applications?.apps?.CombatTrackerConfig;
+        if (typeof CombatTrackerConfig === "function" && app instanceof CombatTrackerConfig) {
+            return true;
+        }
+
+        return app?.constructor?.name === "CombatTrackerConfig";
     }
 
     private static async _onCombatTrackButtonClick(): Promise<void> {

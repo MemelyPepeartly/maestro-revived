@@ -63,21 +63,27 @@ export default class Conductor {
         }
         Conductor.hooksRegistered = true;
 
-        Hooks.on("renderActorSheet", (app, html) => {
-            HypeTrack._onRenderActorSheet(app, html);
+        Hooks.on("getActorSheetHeaderButtons", (app, buttons) => {
+            HypeTrack._onGetActorSheetHeaderButtons(app, buttons);
         });
 
-        Hooks.on("renderItemSheet", (app, html) => {
-            void ItemTrack._onRenderItemSheet(app, html);
+        Hooks.on("getItemSheetHeaderButtons", (app, buttons) => {
+            ItemTrack._onGetItemSheetHeaderButtons(app, buttons);
         });
 
-        Hooks.on("renderChatMessage", (message, html) => {
+        Hooks.on("renderChatMessageHTML", (message, html) => {
             void ItemTrack._onRenderChatMessage(message, html);
             Misc._onRenderChatMessage(message);
         });
 
-        Hooks.on("renderCombatTrackerConfig", (app, html) => {
-            CombatTrack._onRenderCombatTrackerConfig(app, html);
+        Hooks.on("getCombatTrackerConfigHeaderButtons", (app, buttons) => {
+            CombatTrack._onGetCombatTrackerConfigHeaderButtons(app, buttons);
+        });
+
+        Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
+            HypeTrack._onGetApplicationV2HeaderControls(app, controls);
+            ItemTrack._onGetApplicationV2HeaderControls(app, controls);
+            CombatTrack._onGetApplicationV2HeaderControls(app, controls);
         });
 
         Hooks.on("preCreateChatMessage", (message, data) => {
@@ -93,13 +99,9 @@ export default class Conductor {
             return;
         });
 
-        Hooks.on("preUpdateCombat", (combat, update, options) => {
-            CombatTrack._onPreUpdateCombat(combat, update, options as Record<string, unknown>);
-        });
-
-        Hooks.on("updateCombat", (combat, update, options) => {
-            HypeTrack._onUpdateCombat(combat, update);
-            CombatTrack._onUpdateCombat(combat, update, options as Record<string, unknown>);
+        Hooks.on("combatTurnChange", (combat, prior, current) => {
+            HypeTrack._onCombatTurnChange(combat, prior, current);
+            CombatTrack._onCombatTurnChange(combat, prior, current);
         });
 
         Hooks.on("deleteCombat", (combat) => {

@@ -13,6 +13,31 @@ type HypeSelection = {
     track: string;
 };
 
+type CombatHistory = {
+    round?: number;
+    turn?: number | null;
+};
+
+type HeaderButton = {
+    class: string;
+    icon: string;
+    label: string;
+    onclick: (event: Event) => void;
+};
+
+type HeaderControl = {
+    action: string;
+    classes?: string;
+    icon?: string;
+    label: string;
+    onClick?: (event: Event, target?: HTMLElement) => void;
+    visible?: boolean;
+};
+
+type DocumentApplication = {
+    document?: unknown;
+};
+
 function hasNumeric(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
 }
@@ -47,16 +72,23 @@ export default class HypeTrack {
         game.maestro.playHype = game.maestro.hypeTrack.playHype.bind(game.maestro.hypeTrack);
     }
 
-    static _onUpdateCombat(combat: Combat, update: DeepPartial<Combat.Source>): void {
-        void game.maestro.hypeTrack?._processHype(combat, update);
+    static _onCombatTurnChange(combat: Combat, _prior: CombatHistory, current: CombatHistory): void {
+        void game.maestro.hypeTrack?._processHype(combat, {
+            round: current.round,
+            turn: current.turn
+        } as DeepPartial<Combat.Source>);
     }
 
     static _onDeleteCombat(): void {
         void game.maestro.hypeTrack?._stopHypeTrack();
     }
 
-    static _onRenderActorSheet(app: ActorSheet, html: JQuery): void {
-        void game.maestro.hypeTrack?._addHypeButton(app, html);
+    static _onGetActorSheetHeaderButtons(app: ActorSheet, buttons: HeaderButton[]): void {
+        game.maestro.hypeTrack?._addHypeHeaderButton(app, buttons);
+    }
+
+    static _onGetApplicationV2HeaderControls(app: DocumentApplication, controls: HeaderControl[]): void {
+        game.maestro.hypeTrack?._addHypeHeaderControl(app, controls);
     }
 
     async _checkForHypeTracksPlaylist(): Promise<void> {
@@ -253,7 +285,7 @@ export default class HypeTrack {
         });
     }
 
-    async _addHypeButton(app: ActorSheet, html: JQuery): Promise<void> {
+    _addHypeHeaderButton(app: ActorSheet, buttons: HeaderButton[]): void {
         if (!game.user.isGM && !app?.document?.isOwner) {
             return;
         }
@@ -263,25 +295,50 @@ export default class HypeTrack {
             return;
         }
 
-        if (html.find(`.${DEFAULT_CONFIG.HypeTrack.name}`).length > 0) {
+        if (buttons.some((button) => button.class === DEFAULT_CONFIG.HypeTrack.name)) {
             return;
         }
 
-        const hypeButton = $(
-            `<a class="${DEFAULT_CONFIG.HypeTrack.name}" title="${DEFAULT_CONFIG.HypeTrack.aTitle}">` +
-            `<i class="${DEFAULT_CONFIG.HypeTrack.buttonIcon}"></i>` +
-            `<span>${DEFAULT_CONFIG.HypeTrack.buttonText}</span>` +
-            "</a>"
-        );
+        buttons.unshift({
+            class: DEFAULT_CONFIG.HypeTrack.name,
+            icon: DEFAULT_CONFIG.HypeTrack.buttonIcon,
+            label: DEFAULT_CONFIG.HypeTrack.buttonText.trim(),
+            onclick: () => {
+                const actor = app.document;
+                const flags = this._getActorHypeFlags(actor);
+                this._openTrackForm(actor, flags, { closeOnSubmit: true });
+            }
+        });
+    }
 
-        const windowHeader = html.find(".window-header");
-        const closeButton = windowHeader.find(".close");
-        closeButton.before(hypeButton);
+    _addHypeHeaderControl(app: DocumentApplication, controls: HeaderControl[]): void {
+        if (!(app.document instanceof Actor)) {
+            return;
+        }
 
-        hypeButton.on("click", () => {
-            const actor = app.document;
-            const flags = this._getActorHypeFlags(actor);
-            this._openTrackForm(actor, flags, { closeOnSubmit: true });
+        if (!game.user.isGM && !app.document.isOwner) {
+            return;
+        }
+
+        const enabled = game.settings.get(MODULE_NAME, SETTINGS_KEYS.HypeTrack.enable);
+        if (!enabled) {
+            return;
+        }
+
+        if (controls.some((control) => control.action === DEFAULT_CONFIG.HypeTrack.name)) {
+            return;
+        }
+
+        controls.unshift({
+            action: DEFAULT_CONFIG.HypeTrack.name,
+            classes: DEFAULT_CONFIG.HypeTrack.name,
+            icon: DEFAULT_CONFIG.HypeTrack.buttonIcon,
+            label: DEFAULT_CONFIG.HypeTrack.aTitle,
+            onClick: () => {
+                const actor = app.document as Actor;
+                const flags = this._getActorHypeFlags(actor);
+                this._openTrackForm(actor, flags, { closeOnSubmit: true });
+            }
         });
     }
 

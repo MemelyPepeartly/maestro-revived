@@ -27,7 +27,14 @@ jobs:
 
       - name: Get version
         id: vars
-        run: echo "ver=$(jq -r '.version' package.json)" >> "$GITHUB_OUTPUT"
+        run: |
+          MODULE_VERSION=$(jq -r '.version' module.json)
+          PACKAGE_VERSION=$(jq -r '.version' package.json)
+          if [ "$MODULE_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "module.json version ($MODULE_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+          echo "ver=$MODULE_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate version
         run: |

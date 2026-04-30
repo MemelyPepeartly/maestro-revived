@@ -6,6 +6,15 @@
 3. A GM must be logged in for many of the Maestro functions to work due to underlying Foundry permission requirements.
 4. Game systems that do not include an Item Id reference in their item roll chat messages **cannot** be used with Item Tracks
 ---
+## [2.1.0] - 2026-04-30
+### Changed
+- Updated the manifest metadata for Foundry VTT v14.360.
+- Updated repository, manifest, download, README, and release workflow links to the Maestro Revived fork.
+- Switched chat-card handling to the V14 `renderChatMessageHTML` hook.
+- Switched sheet control injection to public ApplicationV1 header-button hooks.
+- Added public ApplicationV2 header-control hooks for V14 application frames.
+- Switched combat turn playback handling to the V14 combat turn-change lifecycle hook.
+
 ## [2.0.1] - 2026-02-19
 ### Changed
 - Improved Hype Track selection UI (cleaner playlist-aware selector and safer legacy assignment handling).

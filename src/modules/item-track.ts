@@ -11,6 +11,31 @@ type ItemTrackFlags = {
 
 type DeletedItemStore = Record<string, ItemTrackFlags>;
 
+type HeaderButton = {
+    class: string;
+    icon: string;
+    label: string;
+    onclick: (event: Event) => void;
+};
+
+type HeaderControl = {
+    action: string;
+    classes?: string;
+    icon?: string;
+    label: string;
+    onClick?: (event: Event, target?: HTMLElement) => void;
+    visible?: boolean;
+};
+
+type DocumentApplication = {
+    document?: unknown;
+    isEditable?: boolean;
+};
+
+function asJQuery(html: JQuery | HTMLElement | string): JQuery {
+    return html instanceof HTMLElement ? $(html) : $(html);
+}
+
 function getDeletedItems(): DeletedItemStore {
     const value = game.settings.get(MODULE_NAME, SETTINGS_KEYS.ItemTrack.deletedItems);
     return value && typeof value === "object" ? (value as DeletedItemStore) : {};
@@ -35,12 +60,16 @@ export default class ItemTrack {
         await game.maestro.itemTrack?._deleteItemHandler(item);
     }
 
-    static async _onRenderChatMessage(message: ChatMessage, html: JQuery): Promise<void> {
+    static async _onRenderChatMessage(message: ChatMessage, html: JQuery | HTMLElement | string): Promise<void> {
         await game.maestro.itemTrack?._chatMessageHandler(message, html);
     }
 
-    static async _onRenderItemSheet(app: ItemSheet, html: JQuery): Promise<void> {
-        await game.maestro.itemTrack?._addItemTrackButton(app, html);
+    static _onGetItemSheetHeaderButtons(app: ItemSheet, buttons: HeaderButton[]): void {
+        game.maestro.itemTrack?._addItemTrackHeaderButton(app, buttons);
+    }
+
+    static _onGetApplicationV2HeaderControls(app: DocumentApplication, controls: HeaderControl[]): void {
+        game.maestro.itemTrack?._addItemTrackHeaderControl(app, controls);
     }
 
     async _checkForItemTracksPlaylist(): Promise<void> {
@@ -84,14 +113,14 @@ export default class ItemTrack {
         await game.settings.set(MODULE_NAME, SETTINGS_KEYS.ItemTrack.deletedItems, deletedItems);
     }
 
-    async _chatMessageHandler(message: ChatMessage, html: JQuery): Promise<void> {
+    async _chatMessageHandler(message: ChatMessage, html: JQuery | HTMLElement | string): Promise<void> {
         const enabled = game.settings.get(MODULE_NAME, SETTINGS_KEYS.ItemTrack.enable);
         if (!enabled || !isFirstGM()) {
             return;
         }
 
         const itemIdentifier = String(game.settings.get(MODULE_NAME, SETTINGS_KEYS.ItemTrack.itemIdAttribute) ?? "data-item-id");
-        const itemCard = html.find(`[${itemIdentifier}]`);
+        const itemCard = asJQuery(html).find(`[${itemIdentifier}]`);
         const trackPlayed = message.getFlag(MODULE_NAME, DEFAULT_CONFIG.ItemTrack.flagNames.played);
         if (!itemCard.length || trackPlayed) {
             return;
@@ -103,7 +132,8 @@ export default class ItemTrack {
         }
 
         const actor = await this._resolveChatSpeakerActor(message);
-        const item = actor?.items?.get(itemId) ?? game.items.get(itemId) ?? null;
+        const messageItem = (message as unknown as { item?: Item | null }).item ?? null;
+        const item = messageItem ?? actor?.items?.get(itemId) ?? game.items.get(itemId) ?? null;
         const flags = item ? this.getItemFlags(item) : getDeletedItems()[itemId] ?? null;
 
         if (!flags) {
@@ -142,35 +172,57 @@ export default class ItemTrack {
         return actorId ? game.actors.get(actorId) ?? null : null;
     }
 
-    async _addItemTrackButton(app: ItemSheet, html: JQuery): Promise<void> {
+    _addItemTrackHeaderButton(app: ItemSheet, buttons: HeaderButton[]): void {
         const enabled = game.settings.get(MODULE_NAME, SETTINGS_KEYS.ItemTrack.enable);
         if (!enabled || !app.isEditable) {
             return;
         }
 
-        if (html.find(`.${DEFAULT_CONFIG.ItemTrack.name}`).length > 0) {
+        if (buttons.some((button) => button.class === DEFAULT_CONFIG.ItemTrack.name)) {
             return;
         }
 
-        const button = $(
-            `<a class="${DEFAULT_CONFIG.ItemTrack.name}" title="${DEFAULT_CONFIG.ItemTrack.aTitle}">` +
-            `<i class="${DEFAULT_CONFIG.ItemTrack.buttonIcon}"></i>` +
-            `<span>${DEFAULT_CONFIG.ItemTrack.buttonText}</span>` +
-            "</a>"
-        );
+        buttons.unshift({
+            class: DEFAULT_CONFIG.ItemTrack.name,
+            icon: DEFAULT_CONFIG.ItemTrack.buttonIcon,
+            label: DEFAULT_CONFIG.ItemTrack.buttonText.trim(),
+            onclick: () => {
+                const item = this._resolveSheetItem(app);
+                if (!item) {
+                    return;
+                }
 
-        const header = html.find(".window-header");
-        const closeButton = header.find(".close");
-        closeButton.before(button);
-
-        button.on("click", () => {
-            const item = this._resolveSheetItem(app);
-            if (!item) {
-                return;
+                const flags = this.getItemFlags(item);
+                this._openTrackForm(item, flags?.track ?? "", flags?.playlist ?? "", { closeOnSubmit: true });
             }
+        });
+    }
 
-            const flags = this.getItemFlags(item);
-            this._openTrackForm(item, flags?.track ?? "", flags?.playlist ?? "", { closeOnSubmit: true });
+    _addItemTrackHeaderControl(app: DocumentApplication, controls: HeaderControl[]): void {
+        if (!(app.document instanceof Item)) {
+            return;
+        }
+
+        const enabled = game.settings.get(MODULE_NAME, SETTINGS_KEYS.ItemTrack.enable);
+        const editable = app.isEditable ?? app.document.isOwner;
+        if (!enabled || !editable) {
+            return;
+        }
+
+        if (controls.some((control) => control.action === DEFAULT_CONFIG.ItemTrack.name)) {
+            return;
+        }
+
+        controls.unshift({
+            action: DEFAULT_CONFIG.ItemTrack.name,
+            classes: DEFAULT_CONFIG.ItemTrack.name,
+            icon: DEFAULT_CONFIG.ItemTrack.buttonIcon,
+            label: DEFAULT_CONFIG.ItemTrack.aTitle,
+            onClick: () => {
+                const item = app.document as Item;
+                const flags = this.getItemFlags(item);
+                this._openTrackForm(item, flags?.track ?? "", flags?.playlist ?? "", { closeOnSubmit: true });
+            }
         });
     }
 

@@ -7,6 +7,7 @@ on:
 
 jobs:
   release:
+    if: github.event.release.tag_name != 'latest'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,12 +26,25 @@ jobs:
       run: npm ci
 
     - name: Validate version
+      id: vars
       run: |
-        VERSION=$(jq -r '.version' module.json)
-        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+        MODULE_VERSION=$(jq -r '.version' module.json)
+        PACKAGE_VERSION=$(jq -r '.version' package.json)
+        TAG_VERSION="${{ github.event.release.tag_name }}"
+        TAG_VERSION="${TAG_VERSION#v}"
+        if [ -z "$MODULE_VERSION" ] || [ "$MODULE_VERSION" = "null" ]; then
           echo "module.json version is empty"
           exit 1
         fi
+        if [ "$MODULE_VERSION" != "$PACKAGE_VERSION" ]; then
+          echo "module.json version ($MODULE_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+          exit 1
+        fi
+        if [ "$MODULE_VERSION" != "$TAG_VERSION" ]; then
+          echo "release tag version ($TAG_VERSION) does not match module.json version ($MODULE_VERSION)"
+          exit 1
+        fi
+        echo "ver=$MODULE_VERSION" >> "$GITHUB_OUTPUT"
 
     #Substitute the Manifest and Download URLs in the module.json
     - name: Substitute Manifest and Download Links For Versioned Ones
@@ -39,7 +53,7 @@ jobs:
       with:
         files: 'module.json'
       env:
-        version: ${{github.event.release.tag_name}}
+        version: ${{ steps.vars.outputs.ver }}
         manifest: https://github.com/${{github.repository}}/releases/latest/download/module.json
         download: https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.zip
 

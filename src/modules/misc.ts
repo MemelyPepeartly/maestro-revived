@@ -9,6 +9,10 @@ interface CriticalTrackSettings {
     criticalFailureSound: string;
 }
 
+function asJQuery(html: JQuery | HTMLElement | string): JQuery {
+    return html instanceof HTMLElement ? $(html) : $(html);
+}
+
 function getCriticalTrackSettings(): CriticalTrackSettings {
     const value = game.settings.get(MODULE_NAME, SETTINGS_KEYS.Misc.criticalSuccessFailureTracks);
 
@@ -44,7 +48,7 @@ function getCriticalTrackSettings(): CriticalTrackSettings {
     };
 }
 
-export function _onRenderPlaylistDirectory(_app: unknown, html: JQuery): void {
+export function _onRenderPlaylistDirectory(_app: unknown, html: JQuery | HTMLElement | string): void {
     _addPlaylistLoopToggle(html);
 }
 
@@ -125,10 +129,12 @@ export class MaestroConfigForm extends FormApplication<FormApplicationOptions, C
     }
 }
 
-function _addPlaylistLoopToggle(html: JQuery): void {
+function _addPlaylistLoopToggle(renderedHtml: JQuery | HTMLElement | string): void {
     if (!game.user.isGM) {
         return;
     }
+
+    const html = asJQuery(renderedHtml);
 
     // Prevent duplicates on repeated directory renders.
     html.find("[data-action='playlist-loop']").remove();

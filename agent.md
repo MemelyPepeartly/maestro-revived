@@ -1,7 +1,7 @@
 # Agent Guide for Maestro (Foundry VTT)
 
 ## Project Overview
-- Maestro is a Foundry VTT module targeting core v13 (`module.json` compatibility minimum `13`, verified `13.346`).
+- Maestro Revived is a Foundry VTT module targeting core v14 (`module.json` compatibility minimum and verified `14.360`).
 - Source entrypoint: `src/maestro.ts`.
 - Runtime build output entrypoint: `dist/maestro.js`.
 - Feature logic is split under `src/modules/`.
@@ -11,8 +11,8 @@
 
 ## Working Rules
 - Make focused, minimal changes tied to the requested task.
-- Preserve Foundry v13 compatibility unless explicitly asked to migrate APIs.
-- Follow the existing plain JavaScript style in this repo.
+- Use Foundry v14-compatible hooks and public application APIs.
+- Follow the existing TypeScript style in this repo.
 - Avoid adding new tooling or dependencies unless required for the task.
 - If adding or changing user-facing text, update localization keys in `lang/en.json` and keep other language files aligned when possible.
 
@@ -28,7 +28,7 @@
 - Do not commit generated archives unless explicitly requested.
 
 ## High-Impact Files
-- Behavior and hooks: `maestro.js`
-- Feature modules: `modules/*.js`
+- Behavior and hooks: `src/maestro.ts`
+- Feature modules: `src/modules/*.ts`
 - Manifest/compatibility: `module.json`
 - Changelog: `CHANGELOG.md`
