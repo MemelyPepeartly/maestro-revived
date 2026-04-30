@@ -2,6 +2,32 @@
 
 const { ApplicationV2, HandlebarsApplicationMixin } = globalThis.foundry.applications.api;
 
+function registerSelectHelper(): void {
+    const handlebars = globalThis.Handlebars;
+    if (!handlebars || handlebars.helpers?.select) {
+        return;
+    }
+
+    handlebars.registerHelper("select", function selectHelper(selected: unknown, options: Record<string, unknown>) {
+        const values = Array.isArray(selected)
+            ? selected.map((value) => String(value ?? ""))
+            : [String(selected ?? "")];
+        const selectedValues = new Set(values);
+        const template = document.createElement("template");
+        template.innerHTML = String((options.fn as Function)(this));
+
+        for (const option of template.content.querySelectorAll("option")) {
+            if (selectedValues.has(option.value)) {
+                option.setAttribute("selected", "selected");
+            } else {
+                option.removeAttribute("selected");
+            }
+        }
+
+        return new handlebars.SafeString(template.innerHTML);
+    });
+}
+
 async function submitMaestroForm(
     this: MaestroFormApplication,
     event: Event,
@@ -22,6 +48,7 @@ export class MaestroFormApplication extends HandlebarsApplicationMixin(Applicati
     data: Record<string, unknown>;
 
     constructor(data: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+        registerSelectHelper();
         super(options);
         this.data = data;
     }

@@ -6,6 +6,10 @@
 3. A GM must be logged in for many of the Maestro functions to work due to underlying Foundry permission requirements.
 4. Game systems that do not include an Item Id reference in their item roll chat messages **cannot** be used with Item Tracks
 ---
+## [2.1.2] - 2026-04-30
+### Fixed
+- Registered the legacy `select` Handlebars helper for Maestro's V14 ApplicationV2 dialogs.
+
 ## [2.1.1] - 2026-04-30
 ### Fixed
 - Migrated Maestro configuration dialogs from deprecated `FormApplication` to V14 `ApplicationV2` form apps.

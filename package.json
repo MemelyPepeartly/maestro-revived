@@ -1,6 +1,6 @@
 {
   "name": "maestro-revived",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Adds new audio features to Foundry VTT",
   "main": "dist/maestro.js",
   "devDependencies": {
