@@ -4,7 +4,7 @@ import { HypeTrackDefaultForm } from "./hype-track.js";
 import { _checkForCriticalPlaylist, _checkForFailurePlaylist, MaestroConfigForm } from "./misc.js";
 
 function resolvePlaylistIdByName(name: string): string {
-    return game.playlists.contents.find((playlist) => playlist.name === name)?.id ?? "";
+    return game.playlists?.contents.find((playlist) => playlist.name === name)?.id ?? "";
 }
 
 export async function registerModuleSettings(): Promise<void> {
